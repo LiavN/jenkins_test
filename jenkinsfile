@@ -13,7 +13,7 @@ pipeline {
         }
         post {
 
-            emailext body: 'TAU Web Server is not respond!\n' & echo readFile('output.txt'), subject: 'TAU Web Server is not respond!', to: 'liav@nefesh.co.il'
+            emailext body: 'email test!\n' & echo readFile('output.txt'), subject: 'jenkins test!', to: 'liav@nefesh.co.il'
          }
      }
     }

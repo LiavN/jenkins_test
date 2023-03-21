@@ -1,0 +1,7 @@
+stage('Deployment on test') {
+    steps {
+        script {
+            def warName = sh(script: 'python ./main.py', returnStdout: true)
+        }
+    }
+}

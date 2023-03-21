@@ -6,14 +6,16 @@ pipeline {
                 sh 'python3 ./main.py > output.txt 2>&1' // run script and capture output
             }
         }
-        stage('Print Console Report') {
+        stage('Email Console Report') {
             steps {
-                echo readFile('output.txt') // print output to console
+                script {
+                    def consoleReport = readFile('output.txt')
+                    def emailBody = 'Hello,\n\nPlease see the console report below:\n\n' + consoleReport
+                    emailext body: emailBody,
+                             subject: 'Console Report',
+                             to: 'liav@nefesh.co.il' // replace with recipient's email address
+                }
             }
         }
-        post {
-            def consoleReport = readFile('output.txt')
-            emailext body: 'email test!\n' + consoleReport, subject: 'jenkins test!', to: 'liav@nefesh.co.il'
-         }
     }
 }

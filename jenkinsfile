@@ -1,7 +1,18 @@
-stage('Deployment on test') {
-    steps {
-        script {
-            env.WAR_NAME = sh(script: "python ./main.py ${customerProfileId} ${FORCE_CUSTOMER_NAME}", returnStdout: true).toString().trim()
-        }
-    }
+def directory = "${env.WORKSPACE}/ProjectName" // change name here
+stage('capture console output') {
+
+  script {
+    def logContent = Jenkins.getInstance().getItemByFullName(env.JOB_NAME).getBuildByNumber(
+      Integer.parseInt(env.BUILD_NUMBER)).logFile.text
+    // copy the log in the job's own workspace
+    writeFile file: directory + "/buildConsolelog.txt",
+      text: logContent
+
+  }
+  def consoleOutput = readFile directory + '/buildConsolelog.txt'
+  echo 'Console output saved in the buildConsolelog file'
+  echo '--------------------------------------'
+  echo consoleOutput
+  echo '--------------------------------------'
+
 }

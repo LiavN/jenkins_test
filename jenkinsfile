@@ -12,8 +12,8 @@ pipeline {
             }
         }
         post {
-
-            emailext body: 'email test!\n' & echo readFile('output.txt'), subject: 'jenkins test!', to: 'liav@nefesh.co.il'
+            def consoleReport = readFile('output.txt')
+            emailext body: 'email test!\n' + consoleReport, subject: 'jenkins test!', to: 'liav@nefesh.co.il'
          }
      }
     }

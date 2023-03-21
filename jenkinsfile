@@ -11,5 +11,10 @@ pipeline {
                 echo readFile('output.txt') // print output to console
             }
         }
+        post {
+
+            emailext body: 'TAU Web Server is not respond!\n' & echo readFile('output.txt'), subject: 'TAU Web Server is not respond!', to: 'liav@nefesh.co.il'
+         }
+     }
     }
 }

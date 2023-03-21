@@ -1,9 +1,7 @@
 stage('Deployment on test') {
     steps {
         script {
-            def warName = sh(script: '#!bin/bash
-                       var output = python ./main.py
-                       return output', returnStdout: true)
+            env.WAR_NAME = sh(script: "python ./main.py ${customerProfileId} ${FORCE_CUSTOMER_NAME}", returnStdout: true).toString().trim()
         }
     }
 }

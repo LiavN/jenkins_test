@@ -15,6 +15,5 @@ pipeline {
             def consoleReport = readFile('output.txt')
             emailext body: 'email test!\n' + consoleReport, subject: 'jenkins test!', to: 'liav@nefesh.co.il'
          }
-     }
     }
 }

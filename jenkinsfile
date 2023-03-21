@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Run Python Script') {
             steps {
-                sh 'python main.py > output.txt 2>&1' // run script and capture output
+                sh 'python ./main.py > output.txt 2>&1' // run script and capture output
             }
         }
         stage('Print Console Report') {

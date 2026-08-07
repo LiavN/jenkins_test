@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}ייבוא CSV — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head"><h1>ייבוא מקובץ CSV</h1></div>
+
+{% if result is not none %}
+  <div class="alert-box ok">יובאו {{ result }} רשומות בהצלחה.</div>
+{% endif %}
+
+<div class="card">
+  <form method="post" action="/import" enctype="multipart/form-data" class="form-grid">
+    <label>רכב
+      <select name="vehicle_id" required>
+        {% for v in nav_vehicles %}<option value="{{ v.id }}">{{ v.display_name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>סוג רשומות
+      <select name="kind">
+        <option value="service">טיפולים</option>
+        <option value="fuel">תדלוקים</option>
+      </select>
+    </label>
+    <label class="full">קובץ CSV<input type="file" name="file" accept=".csv,text/csv" required></label>
+    <button class="btn primary" type="submit">ייבא</button>
+  </form>
+  <div class="muted" style="margin-top:1rem">
+    <p><strong>עמודות לטיפולים:</strong> date, odometer, service_type, garage, cost, items, notes (פעולות מופרדות ב-;)</p>
+    <p><strong>עמודות לתדלוקים:</strong> date, odometer, liters, price_total, station, full_tank, notes</p>
+    <p>כותרות בעברית נתמכות גם: תאריך, קמ, סוג, מוסך, עלות, ליטרים...</p>
+  </div>
+</div>
+{% endblock %}

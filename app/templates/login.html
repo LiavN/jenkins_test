@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>כניסה — מוסך הבית</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="login-body">
+  <form class="card login-card" method="post" action="/login">
+    <h1>🚗 מוסך הבית</h1>
+    <p class="muted">מערכת מעקב כשירות רכבים</p>
+    {% if error %}<div class="alert-box overdue">{{ error }}</div>{% endif %}
+    <label>אימייל
+      <input type="email" name="email" required autofocus>
+    </label>
+    <label>סיסמה
+      <input type="password" name="password" required>
+    </label>
+    <button class="btn primary" type="submit">כניסה</button>
+  </form>
+</body>
+</html>

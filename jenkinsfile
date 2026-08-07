@@ -1,20 +1,30 @@
 pipeline {
     agent any
     stages {
-        stage('Run Python Script') {
+        stage('Install deps') {
             steps {
-                sh 'python3 ./main.py > output.txt 2>&1' // run script and capture output
+                sh 'python3 -m pip install --user -r requirements.txt'
             }
         }
-        stage('Email Console Report') {
+        stage('Run tests') {
             steps {
-                script {
-                    def consoleReport = readFile('output.txt')
-                    def emailBody = 'Hello,\n\nPlease see the console report below:\n\n' + consoleReport
-                    emailext body: emailBody,
-                             subject: 'Console Report',
-                             to: 'liav@nefesh.co.il' // replace with recipient's email address
-                }
+                sh 'python3 -m pytest -q > output.txt 2>&1'
+            }
+        }
+        stage('Build image') {
+            steps {
+                sh 'docker build -t garage:latest .'
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                def consoleReport = readFile('output.txt')
+                def emailBody = 'Hello,\n\nGarage CI test report:\n\n' + consoleReport
+                emailext body: emailBody,
+                         subject: "Garage CI — ${currentBuild.currentResult}",
+                         to: 'liav@nefesh.co.il'
             }
         }
     }

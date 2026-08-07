@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}בסיס ידע — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head"><h1>בסיס ידע</h1></div>
+
+<section class="card">
+  <h3>לוחות טיפול לפי יצרן</h3>
+  {% for v in vehicles %}
+    <h4>{{ v.display_name }}</h4>
+    <table class="table">
+      <thead><tr><th>משימה</th><th>כל (ק״מ)</th><th>כל (חודשים)</th><th>בוצע לאחרונה</th></tr></thead>
+      <tbody>
+        {% for s in v.schedules %}
+        <tr>
+          <td>{{ s.task }}</td>
+          <td>{{ "{:,}".format(s.interval_km) if s.interval_km else "—" }}</td>
+          <td>{{ s.interval_months if s.interval_months else "—" }}</td>
+          <td>{{ s.last_done_odometer if s.last_done_odometer else "" }}{% if s.last_done_date %} · {{ s.last_done_date }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <details class="add-block">
+      <summary>+ הוסף משימת אחזקה</summary>
+      <form method="post" action="/knowledge/schedule" class="form-grid">
+        <input type="hidden" name="vehicle_id" value="{{ v.id }}">
+        <label>משימה<input type="text" name="task" required></label>
+        <label>כל כמה ק״מ<input type="number" name="interval_km"></label>
+        <label>כל כמה חודשים<input type="number" name="interval_months"></label>
+        <label>ק״מ בביצוע אחרון<input type="number" name="last_done_odometer"></label>
+        <label>תאריך ביצוע אחרון<input type="date" name="last_done_date"></label>
+        <button class="btn" type="submit">הוסף</button>
+      </form>
+    </details>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h3>כשלים נפוצים (דיווחי קהילה)</h3>
+  <p class="muted">נקודת פתיחה בלבד — ודאו מול המוסך/היצרן.</p>
+  {% for i in issues %}
+  <div class="issue-row sev-{{ i.severity }}">
+    <div class="issue-head">
+      <span class="pill sev-{{ i.severity }}">{{ i.severity }}</span>
+      <strong>{{ i.make }} {{ i.model }} — {{ i.title }}</strong>
+      {% if i.trigger_km %}<span class="chip">~{{ "{:,}".format(i.trigger_km) }} ק״מ</span>{% endif %}
+    </div>
+    {% if i.description %}<div class="muted pre">{{ i.description }}</div>{% endif %}
+    {% if i.source %}<div class="muted small">מקור: {{ i.source }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

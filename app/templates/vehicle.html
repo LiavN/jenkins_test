@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ vehicle.display_name }} — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ vehicle.display_name }}</h1>
+  {% if vehicle.license_plate %}<span class="plate">{{ vehicle.license_plate }}</span>{% endif %}
+</div>
+
+<div class="stat-row wide">
+  <div class="stat"><span class="num">{{ "{:,}".format(odometer) }}</span><span class="lbl">ק״מ נוכחי</span></div>
+  <div class="stat"><span class="num">{{ km_month if km_month else "—" }}</span><span class="lbl">ק״מ/חודש</span></div>
+  <div class="stat"><span class="num">{{ econ.avg_l_per_100km if econ.avg_l_per_100km else "—" }}</span><span class="lbl">ל/100ק״מ</span></div>
+  <div class="stat"><span class="num">{{ "{:,.0f}".format(maint_cost) }}</span><span class="lbl">עלות אחזקה ₪</span></div>
+</div>
+
+{% if alerts %}
+<section class="card">
+  <h3>התראות פתוחות</h3>
+  {% for a in alerts %}
+    <div class="alert-box {{ a.status }}"><strong>[{{ a.status_label }}]</strong> {{ a.title }}</div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="tabs">
+  <button class="tab-btn active" data-tab="fuel">⛽ תדלוק</button>
+  <button class="tab-btn" data-tab="oil">🛢️ בדיקת שמן</button>
+  <button class="tab-btn" data-tab="service">🔧 טיפול</button>
+</section>
+
+<div class="card tab-panel" id="tab-fuel">
+  <form method="post" action="/vehicles/{{ vehicle.id }}/fuel" class="form-grid">
+    <label>תאריך<input type="date" name="date" value="{{ today }}" required></label>
+    <label>ק״מ<input type="number" name="odometer" inputmode="numeric"></label>
+    <label>ליטרים<input type="number" step="0.01" name="liters" required></label>
+    <label>סכום ₪<input type="number" step="0.01" name="price_total"></label>
+    <label>תחנה<input type="text" name="station"></label>
+    <label class="check"><input type="checkbox" name="full_tank" checked> מיכל מלא</label>
+    <button class="btn primary" type="submit">שמור תדלוק</button>
+  </form>
+</div>
+
+<div class="card tab-panel hidden" id="tab-oil">
+  <form method="post" action="/vehicles/{{ vehicle.id }}/oil" class="form-grid">
+    <label>תאריך<input type="date" name="date" value="{{ today }}" required></label>
+    <label>ק״מ<input type="number" name="odometer" inputmode="numeric"></label>
+    <label>מפלס
+      <select name="level">
+        <option value="ok">תקין</option>
+        <option value="low">חסר</option>
+        <option value="high">עודף</option>
+      </select>
+    </label>
+    <label>מצב השמן<input type="text" name="condition" placeholder="צבע/צמיגות"></label>
+    <label class="check"><input type="checkbox" name="topped_up"> הושלם שמן</label>
+    <button class="btn primary" type="submit">שמור בדיקה</button>
+  </form>
+</div>
+
+<div class="card tab-panel hidden" id="tab-service">
+  <form method="post" action="/vehicles/{{ vehicle.id }}/service" class="form-grid">
+    <label>תאריך<input type="date" name="date" value="{{ today }}" required></label>
+    <label>ק״מ<input type="number" name="odometer" inputmode="numeric"></label>
+    <label>סוג
+      <select name="service_type">
+        {% for key, label in SERVICE_TYPES.items() %}
+          <option value="{{ key }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>מוסך<input type="text" name="garage" value="{{ vehicle.default_garage or '' }}"></label>
+    <label>עלות ₪<input type="number" step="0.01" name="cost"></label>
+    <label class="full">פעולות/חלקים (מופרד בפסיקים)<textarea name="items" rows="2"></textarea></label>
+    <label class="full">הערות<textarea name="notes" rows="2"></textarea></label>
+    <button class="btn primary" type="submit">שמור טיפול</button>
+  </form>
+</div>
+
+<section class="card">
+  <h3>לוג פעילות</h3>
+  {% if not log %}<p class="muted">אין עדיין רשומות.</p>{% endif %}
+  <ul class="timeline">
+    {% for e in log %}
+    <li class="tl-item kind-{{ e.kind }}">
+      <div class="tl-date">{{ e.date }}</div>
+      <div class="tl-body">
+        <strong>{{ e.title }}</strong>
+        {% if e.odometer %}<span class="chip">{{ "{:,}".format(e.odometer) }} ק״מ</span>{% endif %}
+        {% if e.cost %}<span class="chip">{{ "{:,.0f}".format(e.cost) }} ₪</span>{% endif %}
+        {% if e.garage %}<span class="chip">{{ e.garage }}</span>{% endif %}
+        {% if e.detail %}<div class="muted">{{ e.detail }}</div>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<script>
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+data/
+*.db
+*.sqlite3
+.pytest_cache/
+.venv/
+venv/
+output.txt

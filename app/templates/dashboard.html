@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}בית — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>הרכבים שלנו</h1>
+  <a class="btn" href="/vehicles/new">+ רכב חדש</a>
+</div>
+
+{% if not cards %}
+  <div class="card empty">אין עדיין רכבים. <a href="/vehicles/new">הוסיפו רכב ראשון</a>.</div>
+{% endif %}
+
+<div class="grid">
+  {% for c in cards %}
+  <a class="card vehicle-card" href="/vehicles/{{ c.vehicle.id }}">
+    <div class="vehicle-title">
+      <h2>{{ c.vehicle.display_name }}</h2>
+      {% if c.vehicle.license_plate %}<span class="plate">{{ c.vehicle.license_plate }}</span>{% endif %}
+    </div>
+    <div class="stat-row">
+      <div class="stat"><span class="num">{{ "{:,}".format(c.odometer) }}</span><span class="lbl">ק״מ נוכחי</span></div>
+      <div class="stat"><span class="num">{{ c.km_month if c.km_month else "—" }}</span><span class="lbl">ק״מ/חודש</span></div>
+      <div class="stat"><span class="num">{{ c.alerts|length }}</span><span class="lbl">התראות</span></div>
+    </div>
+    {% if c.next_alert %}
+      <div class="alert-box {{ c.next_alert.status }}">
+        <strong>{{ c.next_alert.title }}</strong>
+      </div>
+    {% else %}
+      <div class="alert-box ok">אין התראות פתוחות ✅</div>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

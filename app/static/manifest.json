@@ -1,0 +1,13 @@
+{
+  "name": "מוסך הבית — מעקב כשירות רכבים",
+  "short_name": "מוסך הבית",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1120",
+  "theme_color": "#0f766e",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,14 @@
+services:
+  garage:
+    build: .
+    container_name: garage
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - garage-data:/data
+
+volumes:
+  garage-data:

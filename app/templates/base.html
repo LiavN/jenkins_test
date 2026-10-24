@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>{% block title %}מוסך הבית{% endblock %}</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/icon.svg">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+{% if user %}
+<header class="topbar">
+  <a class="brand" href="/">🚗 מוסך הבית</a>
+  <nav class="topnav">
+    <a href="/">בית</a>
+    <a href="/alerts">התראות{% if alert_count %} <span class="badge">{{ alert_count }}</span>{% endif %}</a>
+    <a href="/receipts">קבלות</a>
+    <a href="/insights">תובנות</a>
+    <a href="/knowledge">בסיס ידע</a>
+    <a href="/logout" class="muted">יציאה</a>
+  </nav>
+</header>
+{% endif %}
+
+<main class="container">
+  {% block content %}{% endblock %}
+</main>
+
+{% if user %}
+<nav class="bottomnav">
+  <a href="/">🏠<span>בית</span></a>
+  <a href="/alerts">🔔<span>התראות</span></a>
+  <a href="/receipts">🧾<span>קבלות</span></a>
+  <a href="/insights">📊<span>תובנות</span></a>
+</nav>
+{% endif %}
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/static/service-worker.js'));
+  }
+</script>
+</body>
+</html>

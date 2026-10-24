@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}קבלות — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head"><h1>קבלות סרוקות</h1></div>
+
+<div class="card">
+  <h3>העלאת קבלה חדשה</h3>
+  {% if not vision_enabled %}
+    <div class="alert-box upcoming">פיענוח אוטומטי כבוי (חסר מפתח API). ניתן להעלות ולתעד ידנית.</div>
+  {% endif %}
+  <form method="post" action="/receipts/upload" enctype="multipart/form-data" class="form-grid">
+    <label>רכב (אופציונלי)
+      <select name="vehicle_id">
+        <option value="">— בחר בהמשך —</option>
+        {% for v in nav_vehicles %}<option value="{{ v.id }}">{{ v.display_name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="full">קובץ (צילום/תמונה/PDF)
+      <input type="file" name="file" accept="image/*,application/pdf" capture="environment" required>
+    </label>
+    <button class="btn primary" type="submit">העלה ופענח</button>
+  </form>
+</div>
+
+<section class="card">
+  <h3>קבלות שהועלו</h3>
+  {% if not receipts %}<p class="muted">אין עדיין קבלות.</p>{% endif %}
+  <ul class="list">
+    {% for r in receipts %}
+    <li class="list-row">
+      <a href="/receipts/{{ r.id }}/file" target="_blank">📄 קבלה #{{ r.id }}</a>
+      <span class="pill {{ r.status }}">{{ r.status_label }}</span>
+      {% if r.vehicle %}<span class="muted">{{ r.vehicle.display_name }}</span>{% endif %}
+      <span class="row-actions">
+        {% if r.status in ['pending', 'failed'] %}
+          <form method="post" action="/receipts/{{ r.id }}/parse"><button class="btn small">פענח</button></form>
+        {% endif %}
+        {% if r.status == 'parsed' %}
+          <a class="btn small primary" href="/receipts/{{ r.id }}/confirm">אשר ותעד</a>
+        {% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

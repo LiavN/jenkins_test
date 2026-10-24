@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}תובנות — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head"><h1>תובנות</h1></div>
+
+{% for r in rows %}
+<section class="card">
+  <h3>{{ r.vehicle.display_name }}</h3>
+  <div class="stat-row wide">
+    <div class="stat"><span class="num">{{ "{:,}".format(r.odometer) }}</span><span class="lbl">ק״מ נוכחי</span></div>
+    <div class="stat"><span class="num">{{ r.km_month if r.km_month else "—" }}</span><span class="lbl">ק״מ/חודש</span></div>
+    <div class="stat"><span class="num">{{ r.econ.avg_l_per_100km if r.econ.avg_l_per_100km else "—" }}</span><span class="lbl">צריכה ממוצעת ל/100</span></div>
+    <div class="stat"><span class="num">{{ r.econ.last_l_per_100km if r.econ.last_l_per_100km else "—" }}</span><span class="lbl">צריכה אחרונה</span></div>
+    <div class="stat"><span class="num">{{ "{:,.0f}".format(r.econ.total_cost) }}</span><span class="lbl">סה״כ דלק ₪</span></div>
+    <div class="stat"><span class="num">{{ "{:,.0f}".format(r.maint_cost) }}</span><span class="lbl">סה״כ אחזקה ₪</span></div>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

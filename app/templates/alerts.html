@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}התראות — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>התראות</h1>
+  <div class="row-actions">
+    <form method="post" action="/alerts/recompute"><button class="btn">חשב מחדש</button></form>
+    <form method="post" action="/alerts/send-digest"><button class="btn primary">שלח סיכום עכשיו</button></form>
+  </div>
+</div>
+
+{% if digest_msg %}
+  <div class="alert-box {{ digest_tone }}">{{ digest_msg }}</div>
+{% endif %}
+{% if not email_enabled %}
+  <p class="muted small">הערה: שליחת מייל אינה מוגדרת (SMTP). הגדר ב-‎.env כדי לאפשר שליחה.</p>
+{% endif %}
+
+{% if not alerts %}
+  <div class="card empty">אין התראות פתוחות. הכל תקין ✅</div>
+{% endif %}
+
+{% for a in alerts %}
+<div class="card alert-row {{ a.status }}">
+  <div>
+    <div class="alert-head">
+      <span class="pill {{ a.status }}">{{ a.status_label }}</span>
+      <span class="pill src">{{ a.source }}</span>
+      <a href="/vehicles/{{ a.vehicle_id }}" class="muted">{{ a.vehicle.display_name }}</a>
+    </div>
+    <strong>{{ a.title }}</strong>
+    {% if a.detail %}<div class="muted pre">{{ a.detail }}</div>{% endif %}
+  </div>
+  <form method="post" action="/alerts/{{ a.id }}/dismiss">
+    <button class="btn small">דחה</button>
+  </form>
+</div>
+{% endfor %}
+{% endblock %}

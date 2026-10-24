@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}אישור קבלה — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head"><h1>אישור ותיעוד קבלה #{{ receipt.id }}</h1></div>
+
+<div class="confirm-grid">
+  <div class="card scan-preview">
+    <h3>הסריקה</h3>
+    <a href="/receipts/{{ receipt.id }}/file" target="_blank">
+      <img src="/receipts/{{ receipt.id }}/file" alt="קבלה סרוקה" loading="lazy">
+    </a>
+  </div>
+
+  <div class="card">
+    <h3>פרטים שפוענחו — בדקו ואשרו</h3>
+    <form method="post" action="/receipts/{{ receipt.id }}/confirm" class="form-grid">
+      <label>רכב
+        <select name="vehicle_id" required>
+          {% for v in nav_vehicles %}
+            <option value="{{ v.id }}" {% if receipt.vehicle_id == v.id %}selected{% endif %}>{{ v.display_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>תאריך<input type="date" name="date" value="{{ parsed.date or today }}" required></label>
+      <label>ק״מ<input type="number" name="odometer" value="{{ parsed.odometer or '' }}"></label>
+      <label>סוג
+        <select name="service_type">
+          {% for key, label in SERVICE_TYPES.items() %}
+            <option value="{{ key }}" {% if parsed.service_type == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>מוסך<input type="text" name="garage" value="{{ parsed.garage or '' }}"></label>
+      <label>עלות ₪<input type="number" step="0.01" name="cost" value="{{ parsed.cost or '' }}"></label>
+      <label class="full">פעולות/חלקים
+        <textarea name="items" rows="3">{{ (parsed['items'] or []) | join(', ') }}</textarea>
+      </label>
+      <label class="full">הערות<textarea name="notes" rows="2">{{ parsed.notes or '' }}</textarea></label>
+      <button class="btn primary" type="submit">אשר וצור רשומת טיפול</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

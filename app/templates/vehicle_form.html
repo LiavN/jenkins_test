@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}רכב חדש — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head"><h1>רכב חדש</h1></div>
+<div class="card">
+  <form method="post" action="/vehicles/new" class="form-grid">
+    <label>יצרן<input type="text" name="make" required placeholder="Toyota / Kia"></label>
+    <label>דגם<input type="text" name="model" required placeholder="Land Cruiser 120"></label>
+    <label>שנה<input type="number" name="year" required></label>
+    <label>תת-דגם/מנוע<input type="text" name="trim"></label>
+    <label>מספר רישוי<input type="text" name="license_plate"></label>
+    <label>מספר שלדה (VIN)<input type="text" name="vin"></label>
+    <label>סוג דלק<input type="text" name="fuel_type" placeholder="בנזין/דיזל"></label>
+    <label>מנוע<input type="text" name="engine"></label>
+    <label>מוסך ברירת מחדל<input type="text" name="default_garage"></label>
+    <label>ק״מ נוכחי (התחלתי)<input type="number" name="initial_odometer"></label>
+    <label class="full">הערות<textarea name="notes" rows="2"></textarea></label>
+    <button class="btn primary" type="submit">שמור רכב</button>
+  </form>
+</div>
+{% endblock %}

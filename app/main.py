@@ -401,11 +401,29 @@ def _recompute_one(db: Session, vehicle_id: int) -> None:
 # ----------------------------------------------------------------------------
 # Alerts
 # ----------------------------------------------------------------------------
+_DIGEST_MSGS = {
+    "sent": ("הסיכום נשלח למייל ✅", "ok"),
+    "off": ("המייל אינו מוגדר במערכת (SMTP). הסיכום לא נשלח.", "upcoming"),
+    "error": ("שליחת הסיכום נכשלה. בדוק את הגדרות ה-SMTP.", "overdue"),
+}
+
+
 @app.get("/alerts", response_class=HTMLResponse)
-def alerts_page(request: Request, db: Session = Depends(get_db)):
+def alerts_page(
+    request: Request, digest: Optional[str] = None, db: Session = Depends(get_db)
+):
     if not current_user(request, db):
         return _redirect_login()
-    return render(request, db, "alerts.html", alerts=alerts.active_alerts(db))
+    digest_msg, digest_tone = _DIGEST_MSGS.get(digest, (None, None))
+    return render(
+        request,
+        db,
+        "alerts.html",
+        alerts=alerts.active_alerts(db),
+        digest_msg=digest_msg,
+        digest_tone=digest_tone,
+        email_enabled=settings.email_enabled,
+    )
 
 
 @app.post("/alerts/{alert_id}/dismiss")
@@ -426,6 +444,19 @@ def recompute_alerts(request: Request, db: Session = Depends(get_db)):
         return _redirect_login()
     alerts.recompute_all(db)
     return RedirectResponse("/alerts", status_code=303)
+
+
+@app.post("/alerts/send-digest")
+def send_digest_now(request: Request, db: Session = Depends(get_db)):
+    """Recompute alerts and email the daily digest on demand."""
+    if not current_user(request, db):
+        return _redirect_login()
+    alerts.recompute_all(db)
+    try:
+        flag = "sent" if notifications.send_digest(db) else "off"
+    except Exception:
+        flag = "error"
+    return RedirectResponse(f"/alerts?digest={flag}", status_code=303)
 
 
 # ----------------------------------------------------------------------------

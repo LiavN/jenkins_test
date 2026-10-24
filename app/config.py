@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
     alert_email_from: str = "garage@example.com"
     alert_email_to: str = ""
+    # Public base URL of the app, used for the "open the app" button in the
+    # digest email. Empty = no button rendered.
+    app_url: str = ""
 
     # Initial users, "name:email:password" comma-separated
     initial_users: str = ""

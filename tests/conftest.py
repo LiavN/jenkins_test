@@ -4,6 +4,8 @@ import os
 os.environ.setdefault("DATABASE_URL", "sqlite://")
 os.environ.setdefault("ANTHROPIC_API_KEY", "")
 os.environ.setdefault("SECRET_KEY", "test-secret")
+# Tests run over plain HTTP via TestClient; debug relaxes the HTTPS-only cookie.
+os.environ.setdefault("DEBUG", "true")
 
 import pytest
 from sqlalchemy import create_engine

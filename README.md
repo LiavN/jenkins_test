@@ -17,6 +17,8 @@
 ## הרצה מהירה (Docker)
 ```bash
 cp .env.example .env      # ערכו: SECRET_KEY, ANTHROPIC_API_KEY, INITIAL_USERS, SMTP
+# חובה: הגדירו SECRET_KEY חזק (האפליקציה מסרבת לעלות עם ברירת המחדל):
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 docker compose up --build
 # פתחו http://localhost:8000  (התחברו עם המשתמש מ-INITIAL_USERS)
 ```
@@ -31,7 +33,8 @@ uvicorn app.main:app --reload
 ## הגדרות (`.env`)
 | משתנה | תיאור |
 |-------|-------|
-| `SECRET_KEY` | מפתח לחתימת עוגיות סשן (חובה לשנות). |
+| `SECRET_KEY` | מפתח לחתימת עוגיות סשן. **חובה** — האפליקציה מסרבת לעלות עם ברירת המחדל/ריק (אלא אם `DEBUG=true`). |
+| `DEBUG` | `true` לפיתוח מקומי בלבד — מרפה את בדיקת ה-SECRET_KEY ואת דרישת ה-HTTPS לעוגייה. ברירת מחדל `false`. |
 | `ANTHROPIC_API_KEY` | מפתח ל-Claude Vision לפיענוח קבלות. ריק = פיענוח כבוי, הזנה ידנית בלבד. |
 | `VISION_MODEL` | מודל הראייה (ברירת מחדל `claude-opus-4-8`). |
 | `INITIAL_USERS` | `שם:אימייל:סיסמה`, מופרד בפסיקים. נוצרים בהפעלה ראשונה. |
@@ -45,6 +48,18 @@ uvicorn app.main:app --reload
 curl -X POST http://localhost:8000/cron/digest
 ```
 ה-`jenkinsfile` מריץ את הטסטים ובונה את אימג' ה-Docker.
+
+## אבטחה
+- **סיסמאות**: מאוחסנות כ-hash עם bcrypt; כל המסכים דורשים התחברות.
+- **`SECRET_KEY`**: חובה — האפליקציה מסרבת לעלות עם ברירת המחדל/ריק (אלא אם `DEBUG=true`).
+- **עוגיית סשן**: `HttpOnly`, `SameSite=Lax`, ובפרודקשן גם `Secure` (HTTPS בלבד).
+- **כותרות אבטחה**: `Content-Security-Policy`, `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy`, ו-HSTS בפרודקשן.
+- **הגבלת קצב התחברות**: נעילה זמנית לאחר 5 נסיונות כושלים (חלון 15 דק').
+- **החלפת סיסמה**: דרך מסך `חשבון` (`/account`) — החליפו את סיסמת ברירת המחדל מיד.
+- **העלאת קבלות**: רק JPG/PNG/WEBP/PDF עד 15MB; מוגשות כהורדה עם `nosniff`.
+- **חשיפה**: ה-container מאזין ל-`127.0.0.1` בלבד; הגישה דרך ה-Cloudflare tunnel.
+- **CI**: שלב `pip-audit` סורק תלויות אחרי הטסטים.
 
 ## טסטים
 ```bash

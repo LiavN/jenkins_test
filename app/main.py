@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import time
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -16,8 +17,8 @@ from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import alerts, notifications, receipts, telemetry
-from .auth import authenticate, current_user
-from .config import get_settings
+from .auth import authenticate, current_user, hash_password, verify_password
+from .config import get_settings, require_secure_config
 from .db import get_db, init_db
 from .models import (
     SERVICE_TYPES,
@@ -33,11 +34,44 @@ from .models import (
 from .seed_data import seed_all
 
 settings = get_settings()
+# Fail fast on an unsafe production configuration (e.g. default SECRET_KEY).
+require_secure_config(settings)
 BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(title="Garage — מעקב כשירות רכבים")
-app.add_middleware(SessionMiddleware, secret_key=settings.secret_key, max_age=60 * 60 * 24 * 30)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    session_cookie="garage_session",
+    max_age=60 * 60 * 24 * 30,
+    same_site="lax",
+    https_only=not settings.debug,  # require HTTPS for the cookie in production
+)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+
+# Content-Security-Policy: the app serves only same-origin CSS/JS plus a few
+# inline <script>/<style> blocks (tab toggles, service worker reg), so allow
+# 'self' with 'unsafe-inline' for script/style only.
+_CSP = (
+    "default-src 'self'; img-src 'self' data:; "
+    "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+    "base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Content-Security-Policy", _CSP)
+    if not settings.debug:
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+    return response
 
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 templates.env.globals["SERVICE_TYPES"] = SERVICE_TYPES
@@ -103,6 +137,23 @@ def _to_date(v: Optional[str]) -> Optional[dt.date]:
 # ----------------------------------------------------------------------------
 # Auth
 # ----------------------------------------------------------------------------
+# --- Simple in-memory login throttling (per account email) -----------------
+# Enough for a tiny household app behind a tunnel; no external dependency.
+_LOGIN_FAILS: dict[str, list[float]] = {}
+_LOGIN_MAX = 5
+_LOGIN_WINDOW = 15 * 60  # seconds
+
+
+def _login_cooldown(key: str) -> Optional[int]:
+    """Remaining lockout seconds for this key, or None if not locked out."""
+    now = time.monotonic()
+    fails = [t for t in _LOGIN_FAILS.get(key, []) if now - t < _LOGIN_WINDOW]
+    _LOGIN_FAILS[key] = fails
+    if len(fails) >= _LOGIN_MAX:
+        return int(_LOGIN_WINDOW - (now - fails[0]))
+    return None
+
+
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, db: Session = Depends(get_db)):
     if current_user(request, db):
@@ -117,11 +168,24 @@ def login_submit(
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
+    key = email.strip().lower()
+    cooldown = _login_cooldown(key)
+    if cooldown:
+        mins = max(1, cooldown // 60)
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request,
+             "error": f"יותר מדי נסיונות התחברות. נסו שוב בעוד ~{mins} דקות."},
+            status_code=429,
+        )
     user = authenticate(db, email, password)
     if not user:
+        _LOGIN_FAILS.setdefault(key, []).append(time.monotonic())
         return templates.TemplateResponse(
-            "login.html", {"request": request, "error": "אימייל או סיסמה שגויים"}
+            "login.html", {"request": request, "error": "אימייל או סיסמה שגויים"},
+            status_code=401,
         )
+    _LOGIN_FAILS.pop(key, None)  # reset on success
     request.session["user_id"] = user.id
     return RedirectResponse("/", status_code=303)
 
@@ -130,6 +194,38 @@ def login_submit(
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
+
+
+@app.get("/account", response_class=HTMLResponse)
+def account_page(request: Request, db: Session = Depends(get_db)):
+    if not current_user(request, db):
+        return _redirect_login()
+    return render(request, db, "account.html", error=None, ok=False)
+
+
+@app.post("/account/password")
+def change_password(
+    request: Request,
+    current: str = Form(...),
+    new: str = Form(...),
+    confirm: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    error = None
+    if not verify_password(current, user.password_hash):
+        error = "הסיסמה הנוכחית שגויה."
+    elif len(new) < 8:
+        error = "הסיסמה החדשה חייבת להכיל לפחות 8 תווים."
+    elif new != confirm:
+        error = "הסיסמה החדשה ואימותה אינם תואמים."
+    if error:
+        return render(request, db, "account.html", error=error, ok=False)
+    user.password_hash = hash_password(new)
+    db.commit()
+    return render(request, db, "account.html", error=None, ok=True)
 
 
 # ----------------------------------------------------------------------------
@@ -462,6 +558,17 @@ def send_digest_now(request: Request, db: Session = Depends(get_db)):
 # ----------------------------------------------------------------------------
 # Receipts (scanned) — upload, parse, confirm
 # ----------------------------------------------------------------------------
+# Only accept the receipt formats the OCR/preview can handle; the extension is
+# derived from the validated type, never from the client-supplied filename.
+_ALLOWED_UPLOAD_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "application/pdf": ".pdf",
+}
+_MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # 15 MB
+
+
 @app.get("/receipts", response_class=HTMLResponse)
 def receipts_page(request: Request, db: Session = Depends(get_db)):
     if not current_user(request, db):
@@ -481,8 +588,19 @@ async def receipt_upload(
 ):
     if not current_user(request, db):
         return _redirect_login()
+    ctype = (file.content_type or "").split(";")[0].strip().lower()
+    if ctype not in _ALLOWED_UPLOAD_TYPES:
+        return render(
+            request, db, "message.html",
+            message="סוג קובץ לא נתמך. יש להעלות תמונה (JPG/PNG/WEBP) או PDF בלבד.",
+        )
     data = await file.read()
-    ext = os.path.splitext(file.filename or "")[1] or ".bin"
+    if len(data) > _MAX_UPLOAD_BYTES:
+        return render(
+            request, db, "message.html",
+            message="הקובץ גדול מדי. הגודל המרבי הוא 15MB.",
+        )
+    ext = _ALLOWED_UPLOAD_TYPES[ctype]
     stored = f"{uuid.uuid4().hex}{ext}"
     path = os.path.join(settings.receipts_dir, stored)
     with open(path, "wb") as fh:
@@ -490,13 +608,13 @@ async def receipt_upload(
     receipt = Receipt(
         vehicle_id=_to_int(vehicle_id),
         filename=stored,
-        content_type=file.content_type,
+        content_type=ctype,
         status="pending",
     )
     db.add(receipt)
     db.commit()
 
-    if settings.vision_enabled and (file.content_type or "").startswith("image/"):
+    if settings.vision_enabled and ctype.startswith("image/"):
         receipts.parse_receipt(db, receipt, data)
         if receipt.status == "parsed":
             return RedirectResponse(f"/receipts/{receipt.id}/confirm", status_code=303)
@@ -580,7 +698,16 @@ def receipt_file(receipt_id: int, request: Request, db: Session = Depends(get_db
     path = os.path.join(settings.receipts_dir, receipt.filename)
     if not os.path.exists(path):
         return Response(status_code=404)
-    return FileResponse(path, media_type=receipt.content_type or "application/octet-stream")
+    # Serve as a download with nosniff so a crafted file can't be interpreted
+    # as active content (e.g. SVG/HTML) in the same origin.
+    return FileResponse(
+        path,
+        media_type=receipt.content_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{receipt.filename}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 # ----------------------------------------------------------------------------

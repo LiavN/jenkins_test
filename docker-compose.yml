@@ -3,8 +3,10 @@ services:
     build: .
     container_name: garage
     restart: unless-stopped
+    # Bind to loopback only: the app is reached through the Cloudflare tunnel /
+    # reverse proxy, never directly over plain HTTP from the LAN/internet.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     volumes:

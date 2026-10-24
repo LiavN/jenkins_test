@@ -11,6 +11,14 @@ pipeline {
                 sh 'python3 -m pytest -q > output.txt 2>&1'
             }
         }
+        stage('Dependency audit') {
+            steps {
+                // Scan dependencies for known CVEs. Non-fatal: reports advisories
+                // without blocking the build.
+                sh 'python3 -m pip install --user pip-audit || true'
+                sh 'python3 -m pip_audit -r requirements.txt >> output.txt 2>&1 || true'
+            }
+        }
         stage('Build image') {
             steps {
                 sh 'docker build -t garage:latest .'

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}חשבון — מוסך הבית{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>החשבון שלי</h1>
+</div>
+
+<section class="card">
+  <h3>שלום {{ user.name }}</h3>
+  <p class="muted small">{{ user.email }}</p>
+</section>
+
+<section class="card">
+  <h3>החלפת סיסמה</h3>
+  {% if ok %}<div class="alert-box ok">הסיסמה עודכנה בהצלחה ✅</div>{% endif %}
+  {% if error %}<div class="alert-box overdue">{{ error }}</div>{% endif %}
+  <form method="post" action="/account/password" class="form-grid">
+    <label class="full">סיסמה נוכחית
+      <input type="password" name="current" autocomplete="current-password" required>
+    </label>
+    <label class="full">סיסמה חדשה (לפחות 8 תווים)
+      <input type="password" name="new" autocomplete="new-password" minlength="8" required>
+    </label>
+    <label class="full">אימות סיסמה חדשה
+      <input type="password" name="confirm" autocomplete="new-password" minlength="8" required>
+    </label>
+    <button class="btn primary" type="submit">עדכן סיסמה</button>
+  </form>
+</section>
+{% endblock %}
